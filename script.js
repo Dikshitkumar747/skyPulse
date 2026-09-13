@@ -100,9 +100,10 @@ async function fetchWeatherByCoords(lat, lon) {
   }
 }
 
-// Dynamic theme switcher and animated weather overlay
+// Dynamic theme switcher and animated weather overlay (Fixed cloud vs sunny threshold bug)
 function setWeatherBackground(data) {
-  const weatherMain = data.weather[0].main.toLowerCase();
+  const weatherId = data.weather[0].id;
+  const cloudsAll = data.clouds ? data.clouds.all : 0;
   const weatherIcon = data.weather[0].icon || "";
   const isNight = weatherIcon.endsWith("n");
   const overlay = document.getElementById("weatherBgOverlay");
@@ -121,12 +122,11 @@ function setWeatherBackground(data) {
 
   if (overlay) overlay.innerHTML = "";
 
-  if (weatherMain.includes("thunder") || weatherMain.includes("rain") || weatherMain.includes("drizzle")) {
-    const isThunder = weatherMain.includes("thunder");
-    document.body.classList.add(isThunder ? "bg-thunderstorm" : "bg-rain");
-
+  // 1. Thunderstorm (Codes 200-232)
+  if (weatherId >= 200 && weatherId <= 232) {
+    document.body.classList.add("bg-thunderstorm");
     if (overlay) {
-      const dropCount = isThunder ? 65 : 45;
+      const dropCount = 65;
       for (let i = 0; i < dropCount; i++) {
         const drop = document.createElement("div");
         drop.className = "drop";
@@ -136,46 +136,79 @@ function setWeatherBackground(data) {
         overlay.appendChild(drop);
       }
     }
-  } else if (weatherMain.includes("cloud") && isNight) {
-    document.body.classList.add("bg-clouds-night");
-
+  } 
+  // 2. Rain / Drizzle / Snow (Codes 300-622)
+  else if ((weatherId >= 300 && weatherId <= 531) || (weatherId >= 600 && weatherId <= 622)) {
+    document.body.classList.add("bg-rain");
     if (overlay) {
-      const stars = document.createElement("div");
-      stars.className = "star-layer";
-      overlay.appendChild(stars);
-
-      const cloud1 = document.createElement("div");
-      cloud1.className = "cloud-layer cloud-layer-1 night-cloud";
-
-      const cloud2 = document.createElement("div");
-      cloud2.className = "cloud-layer cloud-layer-2 night-cloud";
-
-      overlay.appendChild(cloud1);
-      overlay.appendChild(cloud2);
+      const dropCount = 45;
+      for (let i = 0; i < dropCount; i++) {
+        const drop = document.createElement("div");
+        drop.className = "drop";
+        drop.style.left = `${Math.random() * 100}vw`;
+        drop.style.animationDuration = `${0.4 + Math.random() * 0.5}s`;
+        drop.style.animationDelay = `${Math.random() * 2}s`;
+        overlay.appendChild(drop);
+      }
     }
-  } else if (weatherMain.includes("cloud")) {
-    document.body.classList.add("bg-clouds");
-
-    if (overlay) {
-      const cloud1 = document.createElement("div");
-      cloud1.className = "cloud-layer cloud-layer-1";
-
-      const cloud2 = document.createElement("div");
-      cloud2.className = "cloud-layer cloud-layer-2";
-
-      overlay.appendChild(cloud1);
-      overlay.appendChild(cloud2);
+  } 
+  // 3. Clear Sky or Light Scattered Clouds (< 25% cloud cover maintains sunny/clear look)
+  else if (weatherId === 800 || (weatherId >= 801 && cloudsAll < 25)) {
+    if (isNight) {
+      document.body.classList.add("bg-clear-night");
+      if (overlay) {
+        const stars = document.createElement("div");
+        stars.className = "star-layer";
+        overlay.appendChild(stars);
+      }
+    } else {
+      document.body.classList.add("bg-clear-day");
     }
-  } else if (isNight) {
-    document.body.classList.add("bg-clear-night");
+  } 
+  // 4. Heavy Clouds (Codes 802-804 or cloud cover >= 25%)
+  else if (weatherId >= 802 || cloudsAll >= 25) {
+    if (isNight) {
+      document.body.classList.add("bg-clouds-night");
+      if (overlay) {
+        const stars = document.createElement("div");
+        stars.className = "star-layer";
+        overlay.appendChild(stars);
 
-    if (overlay) {
-      const stars = document.createElement("div");
-      stars.className = "star-layer";
-      overlay.appendChild(stars);
+        const cloud1 = document.createElement("div");
+        cloud1.className = "cloud-layer cloud-layer-1 night-cloud";
+
+        const cloud2 = document.createElement("div");
+        cloud2.className = "cloud-layer cloud-layer-2 night-cloud";
+
+        overlay.appendChild(cloud1);
+        overlay.appendChild(cloud2);
+      }
+    } else {
+      document.body.classList.add("bg-clouds");
+      if (overlay) {
+        const cloud1 = document.createElement("div");
+        cloud1.className = "cloud-layer cloud-layer-1";
+
+        const cloud2 = document.createElement("div");
+        cloud2.className = "cloud-layer cloud-layer-2";
+
+        overlay.appendChild(cloud1);
+        overlay.appendChild(cloud2);
+      }
     }
-  } else {
-    document.body.classList.add("bg-clear-day");
+  } 
+  // Fallback
+  else {
+    if (isNight) {
+      document.body.classList.add("bg-clear-night");
+      if (overlay) {
+        const stars = document.createElement("div");
+        stars.className = "star-layer";
+        overlay.appendChild(stars);
+      }
+    } else {
+      document.body.classList.add("bg-clear-day");
+    }
   }
 }
 
@@ -386,13 +419,15 @@ async function fetchAirQuality(lat, lon) {
   }
 }
 
-function getWeatherSymbol(condition) {
-  const main = condition.toLowerCase();
-  if (main.includes("thunderstorm")) return "⛈️";
-  if (main.includes("drizzle") || main.includes("rain")) return "🌧️";
-  if (main.includes("snow")) return "❄️";
-  if (main.includes("clear")) return "☀️";
-  if (main.includes("cloud")) return "⛅";
+// Fixed helper to match the same ID and cloud-coverage threshold logic used in backgrounds
+function getWeatherSymbol(item) {
+  const weatherId = item.weather && item.weather[0] ? item.weather[0].id : 800;
+  const cloudsAll = item.clouds ? item.clouds.all : 0;
+
+  if (weatherId >= 200 && weatherId <= 232) return "⛈️";
+  if ((weatherId >= 300 && weatherId <= 531) || (weatherId >= 600 && weatherId <= 622)) return "🌧️";
+  if (weatherId === 800 || (weatherId >= 801 && cloudsAll < 25)) return "☀️";
+  if (weatherId >= 802 || cloudsAll >= 25) return "⛅";
   return "🌤️";
 }
 
@@ -421,7 +456,7 @@ function updateForecastUI(data) {
       if (index === 0) timeStr = "Now";
 
       const popPercent = Math.round((item.pop || 0) * 100);
-      const symbol = getWeatherSymbol(item.weather[0].main);
+      const symbol = getWeatherSymbol(item); // Pass full item object instead of just main string
 
       const hourlyItem = document.createElement("div");
       hourlyItem.className = "hourly-item";
@@ -453,7 +488,8 @@ function updateForecastUI(data) {
         tempMin: item.main.temp_min,
         tempMax: item.main.temp_max,
         pop: item.pop || 0,
-        weather: item.weather[0]
+        weather: item.weather[0],
+        clouds: item.clouds
       };
     } else {
       dailyData[dateKey].tempMin = Math.min(dailyData[dateKey].tempMin, item.main.temp_min);
@@ -464,7 +500,7 @@ function updateForecastUI(data) {
 
   Object.values(dailyData).slice(0, 5).forEach((day, index) => {
     const popPercent = Math.round(day.pop * 100);
-    const symbol = getWeatherSymbol(day.weather.main);
+    const symbol = getWeatherSymbol(day); // Pass daily aggregate object
     
     let dayLabel = day.dayName;
     if (index === 0) dayLabel = "Today";
@@ -606,30 +642,26 @@ if (SpeechRecognition && voiceBtn) {
 
   recognition.onresult = (event) => {
     let transcript = event.results[0][0].transcript.trim().replace(/\.$/, '');
-    
-    const match = transcript.match(/(?:weather in|forecast for|temperature in|in)\s+([a-zA-Z\s]+)/i);
-    const targetCity = match ? match[1].trim() : transcript;
-
-    if (cityInput) {
-      cityInput.value = targetCity;
-    }
-    fetchWeather(targetCity);
-  };
-
-  recognition.onerror = () => resetVoiceUI();
-  recognition.onend = () => resetVoiceUI();
-
-  function resetVoiceUI() {
+    if (cityInput) cityInput.value = transcript;
+    fetchWeather(transcript);
     voiceBtn.classList.remove('listening');
     if (cityInput) cityInput.placeholder = "Search city...";
-  }
+  };
+
+  recognition.onerror = () => {
+    voiceBtn.classList.remove('listening');
+    if (cityInput) cityInput.placeholder = "Search city...";
+  };
+
+  recognition.onend = () => {
+    voiceBtn.classList.remove('listening');
+    if (cityInput) cityInput.placeholder = "Search city...";
+  };
 }
 
 function speakResponse(text) {
   if ('speechSynthesis' in window) {
-    window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1.0;
     window.speechSynthesis.speak(utterance);
   }
 }

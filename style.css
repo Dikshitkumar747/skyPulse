@@ -24,7 +24,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  transition: background 0.8s ease-in-out;
+  transition: background 0.8s ease-in-out, color 0.3s ease;
   position: relative;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
@@ -43,7 +43,7 @@ body {
   transition: background 0.8s ease-in-out;
 }
 
-/* ================= DYNAMIC BACKGROUND GRADIENT THEMES ================= */
+/* ================= DYNAMIC BACKGROUND GRADIENT THEMES (JS Toggled) ================= */
 
 /* Thunderstorm Base */
 body.bg-thunderstorm .weather-bg-overlay {
@@ -133,7 +133,7 @@ body.rain {
   background: linear-gradient(135deg, #4b6cb7, #182848);
 }
 
-/* ================= BACKGROUND ANIMATIONS ================= */
+/* ================= BACKGROUND JS ANIMATIONS & DYNAMIC ELEMENTS ================= */
 
 .drop {
   position: absolute;
@@ -142,6 +142,8 @@ body.rain {
   height: 60px;
   opacity: 0.7;
   animation: fall linear infinite;
+  pointer-events: none;
+  z-index: 0;
 }
 
 @keyframes fall {
@@ -216,6 +218,7 @@ body.rain {
   background-size: 200px 200px;
   opacity: 0.5;
   animation: pulseStars 3s ease-in-out infinite alternate;
+  pointer-events: none;
 }
 
 @keyframes pulseStars {
@@ -256,6 +259,8 @@ body.rain {
   transition: transform 0.2s ease, opacity 0.2s ease;
   letter-spacing: -0.5px;
   outline: none;
+  background: transparent;
+  border: none;
 }
 
 .app-logo:hover {
@@ -286,6 +291,7 @@ body.rain {
   padding: 8px 15px;
   border-radius: 30px;
   backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border: 1px solid var(--glass-border);
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
@@ -332,11 +338,12 @@ body.rain {
   background: rgba(255, 255, 255, 0.2);
   border: none;
   outline: none;
-  padding: 4px 10px;
+  padding: 6px 10px;
   cursor: pointer;
   font-size: 1.1rem;
   border-radius: 12px;
   transition: background 0.3s ease, transform 0.2s ease;
+  color: var(--text-main);
 }
 
 #locationBtn:hover {
@@ -351,7 +358,7 @@ body.rain {
   cursor: pointer;
   font-size: 1.1rem;
   color: var(--text-main);
-  padding: 4px 8px;
+  padding: 6px 8px;
   border-radius: 50%;
   display: flex;
   align-items: center;
