@@ -3,12 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Weather App</title>
-  <link rel="stylesheet" href="style.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <title>SkyPulse Weather</title>
   
-  <!-- Leaflet CSS & JS -->
+  <!-- External CSS Dependencies -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+  
+  <!-- Leaflet Map Engine -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body class="bg-clear-day">
@@ -16,15 +18,23 @@
   <!-- Dynamic Animated Weather Background Layer -->
   <div id="weatherBgOverlay" class="weather-bg-overlay"></div>
 
-  <div class="app-container">
+  <main class="app-container">
     
-    <!-- Top Search Header with GPS Button -->
-    <header class="search-box">
-      <input type="text" id="cityInput" placeholder="Search city..." autocomplete="off" />
-      <button id="locationBtn" title="Use Current Location">📍</button>
-      <button id="searchBtn">🔍</button>
+    <!-- Top Header Bar with SkyPulse Logo & Search Controls -->
+    <header class="app-header">
+      <div id="appLogo" class="app-logo" role="button" tabindex="0" title="Refresh SkyPulse">
+        <span class="logo-sky">Sky</span><span class="logo-pulse">Pulse</span>
+      </div>
+
+      <div class="search-box">
+        <input type="text" id="cityInput" placeholder="Search city..." autocomplete="off" />
+        <button id="voiceBtn" type="button" title="Voice Search">🎤</button>
+        <button id="searchBtn" type="button" title="Search">🔍</button>
+        <button id="locationBtn" type="button" title="Use Current Location">📍</button>
+      </div>
     </header>
 
+    <!-- Main Current Weather Banner -->
     <section class="hero-weather">
       <h1 id="cityName">New Delhi</h1>
       <p id="condition">Sunny</p>
@@ -34,14 +44,13 @@
       <p class="high-low">H: <span id="tempMax">31</span>°  L: <span id="tempMin">22</span>°</p>
     </section>
 
-    <!-- Large Feels Like Card -->
-    <div class="card">
+    <!-- Feels Like Temperature Gauge Card -->
+    <section class="card">
       <div class="card-header">
         <span>Feels like</span>
         <i class="icon-temp"></i>
       </div>
       
-      <!-- Gradient Progress Bar -->
       <div class="progress-bar-container">
         <div class="gradient-bar"></div>
         <div class="thumb" id="feelsLikeThumb" style="left: 50%;"></div>
@@ -49,28 +58,30 @@
 
       <div class="card-value"><span id="cardFeelsLikeVal">--</span> °C</div>
       <div class="card-subtitle" id="cardFeelsLikeText">Loading...</div>
-    </div>
+    </section>
 
-    <!-- Hourly Forecast Card Section -->
-    <div class="card hourly-card">
+    <!-- Hourly Weather Forecast Section -->
+    <section class="card hourly-card">
       <span class="card-label">Hourly Forecast</span>
       <div class="hourly-list" id="hourlyList">
-        <!-- Rows dynamically populated by JavaScript -->
+        <!-- Dynamically populated by script.js -->
       </div>
-    </div>
+    </section>
 
-    <!-- 7-Day Forecast Card Section -->
-    <div class="card forecast-card">
+    <!-- 7-Day Extended Forecast Section -->
+    <section class="card forecast-card">
       <span class="card-label">7-Day Forecast</span>
       <div class="forecast-list" id="forecastList">
-        <!-- Rows dynamically populated by JavaScript -->
+        <!-- Dynamically populated by script.js -->
       </div>
-    </div>
+    </section>
 
-    <!-- Glassmorphic Details Grid -->
+    <!-- Detailed Environmental Metrics -->
     <section class="details-grid">
+      
+      <!-- Air Quality Index (AQI) Radial Card -->
       <div class="card aqi-card">
-        <span class="card-label">Air quality</span>
+        <span class="card-label">Air Quality</span>
         
         <div class="aqi-content">
           <div class="aqi-gauge-container">
@@ -120,56 +131,55 @@
         </div>
       </div>
 
-      <!-- Wind Tab -->
+      <!-- Wind Speed -->
       <div class="card">
         <span class="card-icon">💨</span>
         <span class="card-label">WIND</span>
         <h3 id="wind">-- km/h</h3>
       </div>
 
-      <!-- Humidity Tab -->
+      <!-- Humidity -->
       <div class="card">
         <span class="card-icon">💧</span>
         <span class="card-label">HUMIDITY</span>
         <h3 id="humidity">--%</h3>
       </div>
 
-      <!-- Visibility Tab -->
+      <!-- Visibility -->
       <div class="card">
         <span class="card-icon">👁️</span>
         <span class="card-label">VISIBILITY</span>
         <div class="card-value" id="visibility">-- km</div>
       </div>
+
     </section>
 
-    <!-- Monthly Forecast Section -->
-    <div class="card monthly-card">
+    <!-- Monthly Overview Calendar -->
+    <section class="card monthly-card">
       <span class="card-label">Monthly</span>
       
-      <!-- Months Tabs Row -->
       <div class="month-tabs" id="monthTabs">
-        <!-- Dynamically filled buttons for 12 months -->
+        <!-- Dynamically generated month selectors -->
       </div>
 
-      <!-- Calendar Day Names Row -->
       <div class="calendar-header-days">
         <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
       </div>
 
-      <!-- Calendar Days Grid -->
       <div class="calendar-grid" id="calendarGrid">
-        <!-- Calendar days dynamically rendered -->
+        <!-- Dynamically rendered monthly days -->
       </div>
-    </div>
+    </section>
 
-    <!-- Native Leaflet Weather Map Card -->
-    <div class="card map-card">
+    <!-- Interactive Leaflet Map Radar -->
+    <section class="card map-card">
       <span class="card-label">Live Weather Radar</span>
       <div id="weatherMap"></div>
-    </div>
+    </section>
 
-  </div>
+  </main>
 
+  <!-- Application Logic -->
   <script src="script.js"></script>
 </body>
 </html>

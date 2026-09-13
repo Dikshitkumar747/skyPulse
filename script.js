@@ -3,6 +3,8 @@ const apiKey = "2538f57997e4797d91b1900eb39ecc93";
 const cityInput = document.getElementById("cityInput");
 const searchBtn = document.getElementById("searchBtn");
 const locationBtn = document.getElementById("locationBtn");
+const voiceBtn = document.getElementById("voiceBtn");
+const appLogo = document.getElementById("appLogo");
 
 // State variables
 let map;
@@ -11,14 +13,68 @@ let currentMarker;
 
 let currentBaseTemp = 28;
 let currentLat = 28.6139; // Default latitude (New Delhi)
-let currentSelectedMonth = new Date().getMonth(); // 0 to 11
+let currentSelectedMonth = 0; // Relative index (0 to 11)
 let currentYear = new Date().getFullYear();
+
+// Initialize app when DOM is ready
+document.addEventListener("DOMContentLoaded", () => {
+  setupEventListeners();
+  initDefaultLocation();
+});
+
+function setupEventListeners() {
+  if (searchBtn) searchBtn.addEventListener("click", handleSearch);
+  
+  if (cityInput) {
+    cityInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") handleSearch();
+    });
+  }
+
+  if (locationBtn) {
+    locationBtn.addEventListener("click", getUserLocation);
+  }
+
+  // Refresh view on logo click
+  if (appLogo) {
+    appLogo.addEventListener("click", () => {
+      getUserLocation();
+    });
+  }
+}
+
+function handleSearch() {
+  const query = cityInput ? cityInput.value.trim() : "";
+  if (query) {
+    fetchWeather(query);
+  }
+}
+
+function getUserLocation() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        fetchWeatherByCoords(position.coords.latitude, position.coords.longitude);
+      },
+      (error) => {
+        console.warn("Geolocation denied/failed. Falling back to default location.", error);
+        fetchWeather("New Delhi");
+      }
+    );
+  } else {
+    fetchWeather("New Delhi");
+  }
+}
+
+function initDefaultLocation() {
+  getUserLocation();
+}
 
 async function fetchWeather(city) {
   if (!city) return;
 
   try {
-    const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&appid=${apiKey}`;
+    const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&units=metric&appid=${apiKey}`;
     const response = await fetch(url);
 
     if (!response.ok) throw new Error("City not found");
@@ -44,18 +100,18 @@ async function fetchWeatherByCoords(lat, lon) {
   }
 }
 
-// Helper to handle dynamic background themes and animated elements
+// Dynamic theme switcher and animated weather overlay
 function setWeatherBackground(data) {
   const weatherMain = data.weather[0].main.toLowerCase();
   const weatherIcon = data.weather[0].icon || "";
   const isNight = weatherIcon.endsWith("n");
   const overlay = document.getElementById("weatherBgOverlay");
 
-  // Remove existing dynamic theme classes from body
   document.body.classList.remove(
     "bg-thunderstorm",
     "bg-rain",
     "bg-clouds",
+    "bg-clouds-night",
     "bg-clear-day",
     "bg-clear-night",
     "clear-sky",
@@ -63,10 +119,8 @@ function setWeatherBackground(data) {
     "rain"
   );
 
-  // Clear previous overlay DOM nodes
   if (overlay) overlay.innerHTML = "";
 
-  // Apply dynamic background animations
   if (weatherMain.includes("thunder") || weatherMain.includes("rain") || weatherMain.includes("drizzle")) {
     const isThunder = weatherMain.includes("thunder");
     document.body.classList.add(isThunder ? "bg-thunderstorm" : "bg-rain");
@@ -82,13 +136,30 @@ function setWeatherBackground(data) {
         overlay.appendChild(drop);
       }
     }
+  } else if (weatherMain.includes("cloud") && isNight) {
+    document.body.classList.add("bg-clouds-night");
+
+    if (overlay) {
+      const stars = document.createElement("div");
+      stars.className = "star-layer";
+      overlay.appendChild(stars);
+
+      const cloud1 = document.createElement("div");
+      cloud1.className = "cloud-layer cloud-layer-1 night-cloud";
+
+      const cloud2 = document.createElement("div");
+      cloud2.className = "cloud-layer cloud-layer-2 night-cloud";
+
+      overlay.appendChild(cloud1);
+      overlay.appendChild(cloud2);
+    }
   } else if (weatherMain.includes("cloud")) {
     document.body.classList.add("bg-clouds");
 
     if (overlay) {
       const cloud1 = document.createElement("div");
       cloud1.className = "cloud-layer cloud-layer-1";
-      
+
       const cloud2 = document.createElement("div");
       cloud2.className = "cloud-layer cloud-layer-2";
 
@@ -110,17 +181,17 @@ function setWeatherBackground(data) {
 
 function updateUI(data) {
   currentBaseTemp = Math.round(data.main.temp);
-  currentLat = data.coord.lat; // Save location latitude for location-aware monthly estimation
+  currentLat = data.coord.lat;
 
   document.getElementById("cityName").innerText = data.name;
   document.getElementById("condition").innerText = data.weather[0].main;
   document.getElementById("temperature").innerText = Math.round(data.main.temp);
   document.getElementById("tempMax").innerText = Math.round(data.main.temp_max);
   document.getElementById("tempMin").innerText = Math.round(data.main.temp_min);
-  
+
   const feelsLikeTemp = Math.round(data.main.feels_like);
   document.getElementById("cardFeelsLikeVal").innerText = feelsLikeTemp;
-  
+
   let subtitleText = "Similar to the actual temperature";
   if (feelsLikeTemp > 35) {
     subtitleText = "Scorching hot";
@@ -131,26 +202,26 @@ function updateUI(data) {
   }
   document.getElementById("cardFeelsLikeText").innerText = subtitleText;
 
-  const maxRange = 50; 
+  const maxRange = 50;
   let percentage = (feelsLikeTemp / maxRange) * 100;
-  percentage = Math.max(0, Math.min(100, percentage)); 
+  percentage = Math.max(0, Math.min(100, percentage));
 
   const feelsLikeThumb = document.getElementById("feelsLikeThumb");
   if (feelsLikeThumb) {
-      feelsLikeThumb.style.left = percentage + "%";
+    feelsLikeThumb.style.left = `${percentage}%`;
   }
-  
+
   document.getElementById("humidity").innerText = `${data.main.humidity}%`;
   document.getElementById("wind").innerText = `${data.wind.speed} km/h`;
-  
+
   let visibilityKm;
   const conditionMain = data.weather[0].main.toLowerCase();
-  
+
   if (data.visibility >= 10000) {
     if (conditionMain.includes("clear")) {
-      visibilityKm = "16.0"; 
+      visibilityKm = "16.0";
     } else if (conditionMain.includes("cloud")) {
-      visibilityKm = "12.0"; 
+      visibilityKm = "12.0";
     } else {
       visibilityKm = "10.0";
     }
@@ -160,17 +231,19 @@ function updateUI(data) {
   document.getElementById("visibility").innerText = `${visibilityKm} km`;
 
   setWeatherBackground(data);
-  
+
   fetchAirQuality(data.coord.lat, data.coord.lon);
   fetchForecast(data.coord.lat, data.coord.lon);
   updateMap(data.coord.lat, data.coord.lon, conditionMain, data.name);
-  
-  // Re-render Monthly Calendar View based on updated city location & temp
+
   setupMonthTabs();
-  renderMonthlyCalendar(currentSelectedMonth, currentYear);
+  const now = new Date();
+  renderMonthlyCalendar(now.getMonth(), now.getFullYear());
+
+  speakResponse(`The weather in ${data.name} is ${Math.round(data.main.temp)} degrees with ${data.weather[0].main}.`);
 }
 
-// --- Leaflet Weather Map Function ---
+// Leaflet Radar Engine
 async function updateMap(lat, lon, weatherType, locationName) {
   const mapElement = document.getElementById('weatherMap');
   if (!mapElement) return;
@@ -365,7 +438,7 @@ function updateForecastUI(data) {
   const forecastList = document.getElementById("forecastList");
   if (!forecastList) return;
 
-  forecastList.innerHTML = ""; 
+  forecastList.innerHTML = "";
 
   const dailyData = {};
 
@@ -417,7 +490,7 @@ function updateForecastUI(data) {
   });
 }
 
-// --- Monthly Calendar Rendering Logic ---
+// Monthly Calendar Overview
 const monthNames = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"
@@ -442,7 +515,7 @@ function setupMonthTabs() {
     btn.addEventListener("click", () => {
       document.querySelectorAll(".month-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
-      currentSelectedMonth = monthIndex;
+      currentSelectedMonth = i;
       currentYear = year;
       renderMonthlyCalendar(monthIndex, year);
     });
@@ -463,12 +536,7 @@ function renderMonthlyCalendar(month, year) {
   const daysInPrevMonth = new Date(year, month, 0).getDate();
 
   const symbolsPool = ["☀️", "⛅", "🌤️", "🌧️", "⛈️"];
-
-  // Latitude factor: Northern Hemisphere gets warmer mid-year (June-July), Southern Hemisphere opposite
   const isNorthernHemisphere = currentLat >= 0;
-  const monthOffset = month - today.getMonth();
-  
-  // Seasonal temperature variation based on month distance
   let seasonalShift = Math.sin((month / 11) * Math.PI - (isNorthernHemisphere ? 0.8 : 3.8)) * 8;
 
   for (let i = firstDay - 1; i >= 0; i--) {
@@ -480,7 +548,6 @@ function renderMonthlyCalendar(month, year) {
   for (let day = 1; day <= daysInMonth; day++) {
     const isToday = (day === today.getDate() && month === today.getMonth() && year === today.getFullYear());
     
-    // Calculate realistic dynamic daily fluctuations based on target city's base temperature
     const dailyFluctuation = Math.sin((day / daysInMonth) * Math.PI * 2) * 3;
     const high = Math.round(currentBaseTemp + seasonalShift + dailyFluctuation);
     const low = Math.round(high - 7 - (day % 3));
@@ -518,38 +585,51 @@ function createCalendarDayElem(num, isOtherMonth, isToday, high = 30, low = 22, 
   return div;
 }
 
-// Event Listeners
-searchBtn.addEventListener("click", () => fetchWeather(cityInput.value));
-cityInput.addEventListener("keypress", (e) => {
-  if (e.key === "Enter") fetchWeather(cityInput.value);
-});
+// Web Speech Recognition Integration
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-locationBtn.addEventListener("click", () => {
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        fetchWeatherByCoords(position.coords.latitude, position.coords.longitude);
-      },
-      (error) => {
-        alert("Unable to retrieve your location.");
-        console.error(error);
-      }
-    );
-  } else {
-    alert("Geolocation is not supported by your browser.");
-  }
-});
+if (SpeechRecognition && voiceBtn) {
+  const recognition = new SpeechRecognition();
+  recognition.continuous = false;
+  recognition.interimResults = false;
+  recognition.lang = 'en-US';
 
-// Auto-fetch current location on load
-if (navigator.geolocation) {
-  navigator.geolocation.getCurrentPosition(
-    (position) => {
-      fetchWeatherByCoords(position.coords.latitude, position.coords.longitude);
-    },
-    (error) => {
-      fetchWeather("New Delhi");
+  voiceBtn.addEventListener('click', () => {
+    try {
+      recognition.start();
+      voiceBtn.classList.add('listening');
+      if (cityInput) cityInput.placeholder = "Listening... Speak a city name";
+    } catch (e) {
+      console.log("Speech recognition is already active.");
     }
-  );
-} else {
-  fetchWeather("New Delhi");
+  });
+
+  recognition.onresult = (event) => {
+    let transcript = event.results[0][0].transcript.trim().replace(/\.$/, '');
+    
+    const match = transcript.match(/(?:weather in|forecast for|temperature in|in)\s+([a-zA-Z\s]+)/i);
+    const targetCity = match ? match[1].trim() : transcript;
+
+    if (cityInput) {
+      cityInput.value = targetCity;
+    }
+    fetchWeather(targetCity);
+  };
+
+  recognition.onerror = () => resetVoiceUI();
+  recognition.onend = () => resetVoiceUI();
+
+  function resetVoiceUI() {
+    voiceBtn.classList.remove('listening');
+    if (cityInput) cityInput.placeholder = "Search city...";
+  }
+}
+
+function speakResponse(text) {
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.0;
+    window.speechSynthesis.speak(utterance);
+  }
 }
