@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SkyPulse Weather</title>
+  
+  <!-- External CSS Dependencies -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+  
+  <!-- Leaflet Map Engine -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body class="bg-clear-day">
+
+  <!-- Dynamic Animated Weather Background Layer -->
+  <div id="weatherBgOverlay" class="weather-bg-overlay"></div>
+
+  <main class="app-container">
+    
+    <!-- Top Header Bar with SkyPulse Logo & Search Controls -->
+    <header class="app-header">
+      <div id="appLogo" class="app-logo" role="button" tabindex="0" title="Refresh SkyPulse">
+        <span class="logo-sky">Sky</span><span class="logo-pulse">Pulse</span>
+      </div>
+
+      <div class="search-box">
+        <input type="text" id="cityInput" placeholder="Search city..." autocomplete="off" />
+        <button id="voiceBtn" type="button" title="Voice Search">🎤</button>
+        <button id="searchBtn" type="button" title="Search">🔍</button>
+        <button id="locationBtn" type="button" title="Use Current Location">📍</button>
+      </div>
+    </header>
+
+    <!-- Main Current Weather Banner -->
+    <section class="hero-weather">
+      <h1 id="cityName">New Delhi</h1>
+      <p id="condition">Sunny</p>
+      <div class="temp-wrapper">
+        <span id="temperature">28</span><span class="degree">°</span>
+      </div>
+      <p class="high-low">H: <span id="tempMax">31</span>°  L: <span id="tempMin">22</span>°</p>
+    </section>
+
+    <!-- Feels Like Temperature Gauge Card -->
+    <section class="card">
+      <div class="card-header">
+        <span>Feels like</span>
+        <i class="icon-temp"></i>
+      </div>
+      
+      <div class="progress-bar-container">
+        <div class="gradient-bar"></div>
+        <div class="thumb" id="feelsLikeThumb" style="left: 50%;"></div>
+      </div>
+
+      <div class="card-value"><span id="cardFeelsLikeVal">--</span> °C</div>
+      <div class="card-subtitle" id="cardFeelsLikeText">Loading...</div>
+    </section>
+
+    <!-- Hourly Weather Forecast Section -->
+    <section class="card hourly-card">
+      <span class="card-label">Hourly Forecast</span>
+      <div class="hourly-list" id="hourlyList">
+        <!-- Dynamically populated by script.js -->
+      </div>
+    </section>
+
+    <!-- 7-Day Extended Forecast Section -->
+    <section class="card forecast-card">
+      <span class="card-label">7-Day Forecast</span>
+      <div class="forecast-list" id="forecastList">
+        <!-- Dynamically populated by script.js -->
+      </div>
+    </section>
+
+    <!-- Detailed Environmental Metrics -->
+    <section class="details-grid">
+      
+      <!-- Air Quality Index (AQI) Radial Card -->
+      <div class="card aqi-card">
+        <span class="card-label">Air Quality</span>
+        
+        <div class="aqi-content">
+          <div class="aqi-gauge-container">
+            <svg viewBox="0 0 120 100" class="gauge-svg">
+              <defs>
+                <linearGradient id="aqiArcGradient" x1="0%" y1="100%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#4CAF50" />
+                  <stop offset="35%" stop-color="#FFEB3B" />
+                  <stop offset="70%" stop-color="#FF9800" />
+                  <stop offset="100%" stop-color="#E91E63" />
+                </linearGradient>
+              </defs>
+              <path d="M 15 85 A 45 45 0 1 1 105 85" fill="none" stroke="url(#aqiArcGradient)" stroke-width="8" stroke-linecap="round"/>
+              <circle id="aqiThumb" cx="15" cy="85" r="5" fill="#ffffff" />
+            </svg>
+            <div class="aqi-center-text">
+              <span class="aqi-status">Lightly<br>polluted</span>
+              <h2 class="aqi-main-value">85</h2>
+            </div>
+          </div>
+
+          <div class="pollutants-grid">
+            <div class="pollutant-item">
+              <span class="p-name">PM<sub>2.5</sub></span>
+              <span class="p-val" id="pm25-val">--</span>
+              <div class="p-bar"><div class="p-fill" id="pm25-bar" style="width: 0%;"></div></div>
+            </div>
+
+            <div class="pollutant-item">
+              <span class="p-name">PM<sub>10</sub></span>
+              <span class="p-val" id="pm10-val">--</span>
+              <div class="p-bar"><div class="p-fill" id="pm10-bar" style="width: 0%;"></div></div>
+            </div>
+
+            <div class="pollutant-item">
+              <span class="p-name">SO<sub>2</sub></span>
+              <span class="p-val" id="so2-val">--</span>
+              <div class="p-bar"><div class="p-fill" id="so2-bar" style="width: 0%;"></div></div>
+            </div>
+
+            <div class="pollutant-item">
+              <span class="p-name">CO</span>
+              <span class="p-val" id="co-val">--</span>
+              <div class="p-bar"><div class="p-fill" id="co-bar" style="width: 0%;"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Wind Speed -->
+      <div class="card">
+        <span class="card-icon">💨</span>
+        <span class="card-label">WIND</span>
+        <h3 id="wind">-- km/h</h3>
+      </div>
+
+      <!-- Humidity -->
+      <div class="card">
+        <span class="card-icon">💧</span>
+        <span class="card-label">HUMIDITY</span>
+        <h3 id="humidity">--%</h3>
+      </div>
+
+      <!-- Visibility -->
+      <div class="card">
+        <span class="card-icon">👁️</span>
+        <span class="card-label">VISIBILITY</span>
+        <div class="card-value" id="visibility">-- km</div>
+      </div>
+
+    </section>
+
+    <!-- Monthly Overview Calendar -->
+    <section class="card monthly-card">
+      <span class="card-label">Monthly</span>
+      
+      <div class="month-tabs" id="monthTabs">
+        <!-- Dynamically generated month selectors -->
+      </div>
+
+      <div class="calendar-header-days">
+        <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+      </div>
+
+      <div class="calendar-grid" id="calendarGrid">
+        <!-- Dynamically rendered monthly days -->
+      </div>
+    </section>
+
+    <!-- Interactive Leaflet Map Radar -->
+    <section class="card map-card">
+      <span class="card-label">Live Weather Radar</span>
+      <div id="weatherMap"></div>
+    </section>
+
+  </main>
+
+  <!-- Application Logic -->
+  <script src="script.js"></script>
+</body>
+</html>
